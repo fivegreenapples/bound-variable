@@ -1,0 +1,2 @@
+-r-x    guest               ? a.out
+can't be dumped or cated but running it produces a core dump containing a publication

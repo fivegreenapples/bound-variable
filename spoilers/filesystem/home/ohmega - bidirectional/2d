@@ -1,0 +1,7 @@
+executable
+
+2d: runs 2d programs
+usage: 2d prog.2d
+reads the program from the file specified,
+and invokes the module 'main' with no arguments.
+prints the result to the screen.

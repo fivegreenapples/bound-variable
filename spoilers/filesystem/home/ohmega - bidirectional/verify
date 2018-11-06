@@ -1,0 +1,12 @@
+executable
+
+verify: verifies that a 2D program meets a specification.
+usage: verify testname prog.2d
+verifies the provided program against the specified test.
+The program's score is determined by its area:
+  Smaller is better.
+Built in tests are :
+  mult
+  rev
+  raytrace
+  ocult
