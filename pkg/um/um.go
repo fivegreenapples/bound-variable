@@ -18,10 +18,8 @@ type platter uint32
 
 type UniversalMachine struct {
 	Gpr          [8]platter
-	Heap         map[platter][]platter
-	NextHeap     platter
+	Heap         [][]platter
 	ExFinger     int
-	done         chan error
 	consoleIn    io.Reader
 	consoleOut   io.Writer
 	logger       *log.Logger
@@ -32,8 +30,7 @@ type UniversalMachine struct {
 func New(input io.Reader, output io.Writer, errorOutput io.Writer, backupFolder string) *UniversalMachine {
 	um := UniversalMachine{
 		Gpr:          [8]platter{},
-		Heap:         map[platter][]platter{},
-		done:         make(chan error),
+		Heap:         make([][]platter, 0),
 		consoleIn:    input,
 		consoleOut:   output,
 		logger:       log.New(errorOutput, "", log.LstdFlags),
@@ -115,23 +112,22 @@ func (um *UniversalMachine) LoadProgram(p io.Reader) error {
 	return nil
 }
 
-func (um *UniversalMachine) Run() {
-	go um.spin()
-}
-func (um *UniversalMachine) Done() <-chan error {
-	return um.done
-}
-func (um *UniversalMachine) halt(err error) {
-	um.done <- err
-	close(um.done)
-}
-func (um *UniversalMachine) allocateHeapArray(len platter) platter {
-	um.Heap[um.NextHeap] = make([]platter, len)
-	um.NextHeap++
-	return um.NextHeap - 1
+func (um *UniversalMachine) Run() error {
+	err := um.spin()
+	fmt.Println(len(um.Heap))
+	return err
 }
 
-func (um *UniversalMachine) spin() {
+// func (um *UniversalMachine) halt(err error) {
+// 	um.done <- err
+// 	close(um.done)
+// }
+func (um *UniversalMachine) allocateHeapArray(length platter) platter {
+	um.Heap = append(um.Heap, make([]platter, length))
+	return platter(len(um.Heap)) - 1
+}
+
+func (um *UniversalMachine) spin() error {
 	var instruction platter
 	var op, valInRegB platter
 	programHeap := um.Heap[0]
@@ -187,8 +183,8 @@ func (um *UniversalMachine) spin() {
 		case 7 << 28:
 			// #7. Halt.
 			// The universal machine stops computation.
-			um.halt(nil)
-			return
+			// um.halt(nil)
+			return nil
 		case 8 << 28:
 			// #8. Allocation.
 			// A new array is created with a capacity of platters
@@ -202,7 +198,7 @@ func (um *UniversalMachine) spin() {
 			// #9. Abandonment.
 			// The array identified by the register C is abandoned.
 			// Future allocations may then reuse that identifier.
-			delete(um.Heap, um.Gpr[instruction&0x00000007])
+			um.Heap[um.Gpr[instruction&0x00000007]] = nil
 		case 10 << 28:
 			// #10. Output.
 			// The value in the register C is displayed on the console
@@ -235,8 +231,8 @@ func (um *UniversalMachine) spin() {
 				if err == io.EOF {
 					um.Gpr[(instruction & 0x00000007)] = 0xffffffff
 				} else {
-					um.halt(fmt.Errorf("error reading from stdin: %s", err))
-					return
+					// um.halt(fmt.Errorf("error reading from stdin: %s", err))
+					return fmt.Errorf("error reading from stdin: %s", err)
 				}
 			}
 		case 12 << 28:
@@ -263,6 +259,7 @@ func (um *UniversalMachine) spin() {
 				um.Heap[0] = newProgram
 				programHeap = um.Heap[0]
 			}
+			// programHeap = um.Heap[um.Gpr[(instruction&0x00000038)>>3]]
 			// set execution finger
 			um.ExFinger = int(um.Gpr[(instruction & 0x00000007)])
 		case 13 << 28:
@@ -285,4 +282,5 @@ func (um *UniversalMachine) spin() {
 
 		}
 	}
+	return nil
 }

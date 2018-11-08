@@ -82,8 +82,7 @@ func main() {
 		}
 	}
 
-	myUM.Run()
-	endErr := <-myUM.Done()
+	endErr := myUM.Run()
 
 	if endErr != nil {
 		fmt.Println(endErr)
